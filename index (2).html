@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COSMOS</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #020408;
+    color: #fff9e6;
+    font-family: 'Courier New', Courier, monospace;
+    overflow-x: hidden;
+    min-height: 100vh;
+    cursor: none;
+  }
+
+  #cursor {
+    width: 12px; height: 12px;
+    background: #00ffe5;
+    border-radius: 50%;
+    position: fixed; top: 0; left: 0;
+    pointer-events: none;
+    z-index: 9999;
+    mix-blend-mode: screen;
+    transition: transform 0.15s ease;
+    box-shadow: 0 0 20px #00ffe5, 0 0 60px #00ffe5;
+  }
+  #cursor-trail {
+    width: 36px; height: 36px;
+    border: 1px solid rgba(0,255,229,0.5);
+    border-radius: 50%;
+    position: fixed; top: 0; left: 0;
+    pointer-events: none;
+    z-index: 9998;
+    transition: left 0.18s ease, top 0.18s ease;
+  }
+
+  canvas#starfield {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+  }
+
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.12;
+    pointer-events: none;
+    z-index: 1;
+    animation: drift linear infinite;
+  }
+  .orb1 { width:600px;height:600px;background:#00ffe5;top:-200px;left:-150px;animation-duration:28s; }
+  .orb2 { width:450px;height:450px;background:#ff3d6b;bottom:-150px;right:-100px;animation-duration:22s;animation-delay:-8s; }
+  .orb3 { width:320px;height:320px;background:#7b4fff;top:40%;left:40%;animation-duration:18s;animation-delay:-4s; }
+
+  main {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 60px 24px;
+  }
+
+  .hero { text-align: center; margin-bottom: 80px; }
+
+  .hero-label {
+    font-size: 11px;
+    letter-spacing: 0.5em;
+    color: #00ffe5;
+    text-transform: uppercase;
+    opacity: 0;
+    animation: fadeUp 1s 0.4s ease forwards;
+  }
+
+  .hero-title {
+    font-family: Impact, 'Arial Black', sans-serif;
+    font-size: clamp(80px, 18vw, 220px);
+    font-weight: 900;
+    line-height: 0.85;
+    letter-spacing: -2px;
+    background: linear-gradient(135deg, #fff9e6 0%, #00ffe5 45%, #ff3d6b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    background-size: 200% 200%;
+    opacity: 0;
+    animation: fadeUp 1.2s 0.6s ease forwards, shimmer 5s 1.8s infinite;
+  }
+
+  .hero-sub {
+    font-size: 11px;
+    font-style: italic;
+    color: rgba(255,249,230,0.35);
+    margin-top: 20px;
+    letter-spacing: 0.25em;
+    opacity: 0;
+    animation: fadeUp 1s 1.1s ease forwards;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 2px;
+    width: 100%;
+    max-width: 900px;
+    opacity: 0;
+    animation: fadeUp 1s 1.5s ease forwards;
+  }
+
+  .card {
+    background: rgba(0,255,229,0.04);
+    border: 1px solid rgba(0,255,229,0.1);
+    padding: 32px 28px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.35s, transform 0.35s;
+    cursor: none;
+  }
+
+  .card-shine {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,255,229,0.08) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.4s;
+    pointer-events: none;
+  }
+
+  .card:hover { border-color: #00ffe5; transform: translateY(-5px); }
+  .card:hover .card-shine { opacity: 1; }
+
+  .card-num {
+    font-family: Impact, sans-serif;
+    font-size: 52px;
+    color: #00ffe5;
+    opacity: 0.25;
+    line-height: 1;
+  }
+  .card-title {
+    font-size: 10px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: #fff9e6;
+    margin: 12px 0 8px;
+  }
+  .card-text {
+    font-size: 11px;
+    line-height: 1.9;
+    color: rgba(255,249,230,0.33);
+    font-style: italic;
+  }
+
+  .sep {
+    width: 100%;
+    max-width: 900px;
+    height: 1px;
+    margin: 50px 0;
+    position: relative;
+    background: linear-gradient(90deg, transparent, rgba(0,255,229,0.4), transparent);
+    opacity: 0;
+    animation: fadeIn 1s 2s ease forwards;
+  }
+  .sep::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: #ff3d6b;
+    animation: glitch 4s 2s infinite;
+  }
+
+  .counters {
+    display: flex;
+    gap: clamp(30px, 8vw, 80px);
+    flex-wrap: wrap;
+    justify-content: center;
+    opacity: 0;
+    animation: fadeUp 1s 2.2s ease forwards;
+  }
+  .c-item { text-align: center; }
+  .c-num {
+    font-family: Impact, sans-serif;
+    font-size: clamp(38px, 8vw, 60px);
+    color: #00ffe5;
+    display: block;
+    line-height: 1;
+    text-shadow: 0 0 30px rgba(0,255,229,0.4);
+  }
+  .c-label {
+    font-size: 9px;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: rgba(255,249,230,0.28);
+    margin-top: 6px;
+  }
+
+  .particle {
+    position: fixed;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 8000;
+    animation: burst 0.9s ease-out forwards;
+  }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(28px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  @keyframes fadeIn { to { opacity:1; } }
+  @keyframes shimmer {
+    0%,100% { background-position:0% 50%; }
+    50%      { background-position:100% 50%; }
+  }
+  @keyframes drift {
+    0%   { transform:translate(0,0) scale(1); }
+    33%  { transform:translate(50px,-50px) scale(1.08); }
+    66%  { transform:translate(-40px,60px) scale(0.93); }
+    100% { transform:translate(0,0) scale(1); }
+  }
+  @keyframes glitch {
+    0%,88%,100% { transform:scaleX(0); left:0; }
+    90%  { transform:scaleX(0.25); left:25%; }
+    93%  { transform:scaleX(0.08); left:65%; }
+    96%  { transform:scaleX(0.4);  left:5%;  }
+  }
+  @keyframes burst {
+    0%   { transform:translate(0,0) scale(1); opacity:1; }
+    100% { transform:translate(var(--dx),var(--dy)) scale(0); opacity:0; }
+  }
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-trail"></div>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+<canvas id="starfield"></canvas>
+
+<main>
+  <div class="hero">
+    <p class="hero-label">— Добро пожаловать в пустоту —</p>
+    <h1 class="hero-title">COSMOS</h1>
+    <p class="hero-sub">кликайте куда угодно &nbsp;·&nbsp; наводите на карточки</p>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-shine"></div>
+      <div class="card-num">01</div>
+      <div class="card-title">Бесконечность</div>
+      <div class="card-text">Вселенная расширяется со скоростью 73 км/с на каждый мегапарсек пространства.</div>
+    </div>
+    <div class="card">
+      <div class="card-shine"></div>
+      <div class="card-num">02</div>
+      <div class="card-title">Тёмная материя</div>
+      <div class="card-text">27% вселенной — нечто невидимое. Мы знаем о её существовании только через гравитацию.</div>
+    </div>
+    <div class="card">
+      <div class="card-shine"></div>
+      <div class="card-num">03</div>
+      <div class="card-title">Сингулярность</div>
+      <div class="card-text">В сердце чёрной дыры физика перестаёт работать. Пространство и время исчезают.</div>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="counters">
+    <div class="c-item"><span class="c-num" data-target="2000000000000">0</span><span class="c-label">галактик</span></div>
+    <div class="c-item"><span class="c-num" data-target="13800000000">0</span><span class="c-label">лет возраст</span></div>
+    <div class="c-item"><span class="c-num" data-target="299792">0</span><span class="c-label">км/с свет</span></div>
+  </div>
+</main>
+
+<script>
+// --- Cursor ---
+const cur = document.getElementById('cursor');
+const trl = document.getElementById('cursor-trail');
+document.addEventListener('mousemove', function(e) {
+  cur.style.left = (e.clientX - 6) + 'px';
+  cur.style.top  = (e.clientY - 6) + 'px';
+  trl.style.left = (e.clientX - 18) + 'px';
+  trl.style.top  = (e.clientY - 18) + 'px';
+});
+
+// --- Starfield ---
+var canvas = document.getElementById('starfield');
+var ctx = canvas.getContext('2d');
+var stars = [];
+
+function resize() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+for (var i = 0; i < 220; i++) {
+  stars.push({
+    x: Math.random() * window.innerWidth,
+    y: Math.random() * window.innerHeight,
+    r: Math.random() * 1.4 + 0.2,
+    speed: Math.random() * 0.25 + 0.05,
+    a: Math.random(),
+    da: (Math.random() - 0.5) * 0.008
+  });
+}
+
+function drawStars() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (var i = 0; i < stars.length; i++) {
+    var s = stars[i];
+    s.a += s.da;
+    if (s.a <= 0 || s.a >= 1) s.da *= -1;
+    s.y -= s.speed;
+    if (s.y < 0) { s.y = canvas.height; s.x = Math.random() * canvas.width; }
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,249,230,' + s.a + ')';
+    ctx.fill();
+  }
+  requestAnimationFrame(drawStars);
+}
+drawStars();
+
+// --- Click particles ---
+var colors = ['#00ffe5','#ff3d6b','#7b4fff','#fff9e6','#ffdd00'];
+document.addEventListener('click', function(e) {
+  for (var i = 0; i < 18; i++) {
+    var p = document.createElement('div');
+    p.className = 'particle';
+    var angle = (i / 18) * Math.PI * 2;
+    var dist  = 55 + Math.random() * 85;
+    p.style.left = e.clientX + 'px';
+    p.style.top  = e.clientY + 'px';
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    p.style.setProperty('--dx', (Math.cos(angle) * dist) + 'px');
+    p.style.setProperty('--dy', (Math.sin(angle) * dist) + 'px');
+    p.style.boxShadow = '0 0 8px ' + p.style.background;
+    document.body.appendChild(p);
+    setTimeout(function(el){ el.remove(); }, 900, p);
+  }
+  cur.style.transform = 'scale(3)';
+  setTimeout(function(){ cur.style.transform = 'scale(1)'; }, 200);
+});
+
+// --- Counters ---
+function animateCounter(el, target) {
+  var start = null;
+  var duration = 2800;
+  function step(ts) {
+    if (!start) start = ts;
+    var prog = Math.min((ts - start) / duration, 1);
+    var ease = 1 - Math.pow(1 - prog, 3);
+    var val  = Math.floor(ease * target);
+    el.textContent = val.toLocaleString('ru');
+    if (prog < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+var fired = false;
+function checkCounters() {
+  if (fired) return;
+  var row = document.querySelector('.counters');
+  if (!row) return;
+  var rect = row.getBoundingClientRect();
+  if (rect.top < window.innerHeight - 50) {
+    fired = true;
+    var els = document.querySelectorAll('[data-target]');
+    for (var i = 0; i < els.length; i++) {
+      animateCounter(els[i], parseInt(els[i].getAttribute('data-target')));
+    }
+  }
+}
+window.addEventListener('scroll', checkCounters);
+setTimeout(checkCounters, 2500);
+</script>
+</body>
+</html>
